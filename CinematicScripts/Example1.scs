@@ -1,0 +1,50 @@
+# Example cinematic script 1
+
+# Starting at 0.3 seconds, move the camera 500.1 units
+# on the X axis over a period of 5.2 seconds.
+mov,0.3,5.2,[100.1,0,0]
+
+# Starting at 1 second, increase the timescale to an
+# absolute of 40 over a period of 5 seconds
+tim,1,5,{40}
+
+# Starting at 2 seconds, rotate the camera 179.9 degrees
+# on the Z axis over a period of 2.5 seconds.
+rot,2,2.5,[0,179.9]
+
+# Starting at 10 seconds, move the camera 500 units
+# on the Y axis over a period of 5 seconds.
+mov,10,5,[0,350,0]
+
+# Starting at 11 seconds, rotate the camera -30 degrees
+# on the X axis and -30 degrees on the Z axis over a
+# period of 3 seconds.
+rot,11,3,[-30,-30]
+
+# Starting at 16 seconds, move the camera 50 units
+# on the Z axis for 5 seconds.
+mov,16,5,[0,0,150]
+
+# Starting at 17 seconds, decrease the FOV by 30 degrees
+# over a period of 4 seconds.
+fov,17,4,[-30]
+
+# Starting at 21 seconds, move the camera -50 units
+# on the Z axis for 5 seconds.
+mov,21,5,[0,0,-80]
+
+# Starting at 17 seconds, increase the FOV by -30 degrees
+# over a period of 4 seconds.
+fov,22,4,[30]
+
+# Starting at 29 seconds, move along a spline with 4 points
+# and reach the last after 10 seconds
+spl,28,10,[0,100,0],[100,0,250],[200,150,10],[130,210,0]
+
+# Starting at 30 seconds, decrease the timescale by 20 units
+# over a period of 2 seconds
+tim,30,2,[-20]
+
+# Dummy rotation command that does nothing but keeps the
+# script from finishing until 30.1 seconds after it started.
+rot,31,2,[30,-150]
