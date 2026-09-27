@@ -1,6 +1,7 @@
-# Skyrim Cinematic System SE/AE v0.3.3
+# Skyrim Cinematic System SE/AE
 
 New approach to the idea of original [Skyrim Legendary Edition CameraScripter](https://www.nexusmods.com/skyrim/mods/79041) to Skyrim SE/AE using the official [libxse CommonLibSSE-NG template](https://github.com/libxse/commonlibsse-ng-template) structure.
+It's *no port*, but completely created from scratch, with backwards compatibility towards old `.scs` files in mind.
 
 ## Important
 
@@ -10,6 +11,10 @@ The repository deliberately keeps `lib/commonlibsse-ng` as the CommonLibSSE-NG g
     git submodule update --init --recursive
 
 The upstream template currently requires XMake 3.0+ and a C++23 compiler, and builds into `build/windows/`. See the upstream template for environment variables such as `XSE_TES5_GAME_PATH` and `XSE_TES5_MODS_PATH`.
+
+### Disclaimer
+
+This code is completely AI coded. Errors may occur.
 
 ## Current implementation
 

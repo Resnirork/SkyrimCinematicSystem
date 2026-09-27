@@ -1,7 +1,7 @@
 includes("lib/commonlibsse-ng")
 
 set_project("SkyrimCinematicSystem")
-set_version("0.3.3")
+set_version("0.4.0")
 set_license("GPL-3.0")
 set_languages("c++23")
 set_warnings("allextra")
@@ -14,7 +14,7 @@ target("SkyrimCinematicSystem")
     add_rules("commonlibsse-ng.plugin", {
         name = "Skyrim Cinematic System",
         author = "Fa'Rihr",
-        description = "Skyrim Cinematic System for Skyrim SE/AE using CommonLibSSE-NG"
+        description = "Reads script files and runs cinematic camera tracking shots based on the script within Skyrim Skyrim Special Edition"
     })
     add_files("src/**.cpp")
     add_headerfiles("src/**.h")
