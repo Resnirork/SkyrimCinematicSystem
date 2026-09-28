@@ -258,10 +258,16 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
             std::vector<RE::NiPoint3> points;
             points.reserve(a.points.size() + 1);
             points.push_back(baseline.position);
+            auto pointPosition = baseline.position;
             for (const auto& point : a.points) {
-                points.push_back(a.mode == ValueMode::Relative
-                                     ? RE::NiPoint3{baseline.position.x + point.x, baseline.position.y + point.y, baseline.position.z + point.z}
-                                     : point);
+                if (a.mode == ValueMode::Relative) {
+                    pointPosition.x += point.x;
+                    pointPosition.y += point.y;
+                    pointPosition.z += point.z;
+                    points.push_back(pointPosition);
+                } else {
+                    points.push_back(point);
+                }
             }
 
             const float segmentPosition = t * static_cast<float>(points.size() - 1);
@@ -286,8 +292,13 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
         }
     } else if (a.type == ActionType::Rotate) {
         const float pitchDelta = -a.vector.x * kRadPerDeg;
-        const float targetPitch = a.mode == ValueMode::Absolute ? pitchDelta : baseline.pitch + pitchDelta;
-        const float targetYaw = a.mode == ValueMode::Absolute ? a.vector.y * kRadPerDeg : baseline.yaw + a.vector.y * kRadPerDeg;
+        const float targetPitch = a.mode == ValueMode::Absolute
+                                      ? baseline.pitch + std::remainder(pitchDelta - baseline.pitch, 2.0f * kPi)
+                                      : baseline.pitch + pitchDelta;
+        const float yawDelta = a.vector.y * kRadPerDeg;
+        const float targetYaw = a.mode == ValueMode::Absolute
+                                    ? baseline.yaw + std::remainder(yawDelta - baseline.yaw, 2.0f * kPi)
+                                    : baseline.yaw + yawDelta;
         state->rotation.x = Lerp(baseline.pitch, targetPitch, t);
         state->rotation.y = Lerp(baseline.yaw, targetYaw, t);
     } else if (a.type == ActionType::FOV) {
@@ -474,7 +485,8 @@ bool Runtime::SaveRecordingPoint(bool absolute)
         recordingLines_.push_back(std::format("mov,{:.3f},0,[{:.3f},{:.3f},{:.3f}]", t,
                                                x - previous.x, y - previous.y, z - previous.z));
         recordingLines_.push_back(std::format("rot,{:.3f},0,[{:.3f},{:.3f}]", t,
-                                               rx - previous.pitch, rz - previous.yaw));
+                                               std::remainder(rx - previous.pitch, 360.0f),
+                                               std::remainder(rz - previous.yaw, 360.0f)));
         recordingLines_.push_back(std::format("fov,{:.3f},0,[{:.3f}]", t, fov - previous.fov));
     }
     previousRecordingPoint_ = currentPoint;

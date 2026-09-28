@@ -96,11 +96,21 @@ Event OnPageReset(String page)
     String displayName = SelectedScript
 
     EnsureKeyArray()
-    If (scriptFiles == None)
+    If (!scriptFiles)
         RefreshScriptFiles()
     EndIf
 
     If (page == "" || Page == Pages[0])
+        Int scriptFlags = OPTION_FLAG_NONE
+        AddHeaderOption("$scs_Header_SCRIPT_SELECT")
+        AddEmptyOption()
+        If (!scriptFiles || scriptFiles.Length == 0)
+            displayName = ""
+            scriptFlags = OPTION_FLAG_DISABLED
+        EndIf
+        AddMenuOptionST("SCRIPT_SELECT", "$scs_Short_SCRIPT_SELECT", displayName, scriptFlags)
+        AddToggleOptionST("HIDE_INTERFACE", "$scs_Short_HIDE_INTERFACE", HideInterface)
+    ElseIf (page == Pages[1])
         AddHeaderOption("$scs_Header_KEY_START_STOP")
         AddEmptyOption()
         AddKeyMapOptionST("KEY_START_STOP", "$scs_Short_KEY_START_STOP", iKeys[START_STOP_SCRIPT], OPTION_FLAG_WITH_UNMAP)
@@ -112,15 +122,6 @@ Event OnPageReset(String page)
         AddKeyMapOptionST("KEY_RELATIVE_POINT", "$scs_Short_KEY_RELATIVE_POINT", iKeys[RELATIVE_POINT_RECORDING], OPTION_FLAG_WITH_UNMAP)
         AddKeyMapOptionST("KEY_ABSOLUTE_POINT", "$scs_Short_KEY_ABSOLUTE_POINT", iKeys[ABSOLUTE_POINT_RECORDING], OPTION_FLAG_WITH_UNMAP)
         AddTextOptionST("KEYS_CLEAR_ALL", "$scs_Short_KEYS_CLEAR_ALL", "$scs_Value_KEYS_CLEAR_ALL")
-    ElseIf (page == Pages[1])
-        Int scriptFlags = OPTION_FLAG_NONE
-        AddHeaderOption("$scs_Header_SCRIPT_SELECT")
-        If (scriptFiles.Length == 0)
-            displayName = ""
-            scriptFlags = OPTION_FLAG_DISABLED
-        EndIf
-        AddMenuOptionST("SCRIPT_SELECT", "$scs_Short_SCRIPT_SELECT", displayName, scriptFlags)
-        AddToggleOptionST("HIDE_INTERFACE", "$scs_Short_HIDE_INTERFACE", HideInterface)
     EndIf
 EndEvent
 
@@ -150,6 +151,7 @@ EndFunction
 
 State SCRIPT_SELECT
     Event OnMenuOpenST()
+        RefreshScriptFiles()
         If (!scriptFiles || scriptFiles.Length == 0)
             Return
         EndIf
