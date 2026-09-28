@@ -8,8 +8,8 @@ bool function StartScript(string filename, bool hideInterface = false) global na
 function StopScript() global native
 bool function IsScriptRunning() global native
 
-function RegisterForCinematicScriptEvents() native
-function UnregisterForCinematicScriptEvents() native
+bool function RegisterForCinematicScriptEvents(Form listener) global native
+bool function UnregisterForCinematicScriptEvents(Form listener) global native
 
 bool function StartRecording() global native
 bool function StopRecording() global native
@@ -24,6 +24,3 @@ float function GetCurrentRotZ() global native
 float function GetCurrentFOV() global native
 float function GetCurrentTimeMultiplier() global native
 
-event OnInit()
-    RegisterForCinematicScriptEvents()
-endevent

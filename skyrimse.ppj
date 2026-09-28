@@ -37,7 +37,7 @@
         <Import>@MO2\BaseGame Scripts\Source\Scripts</Import>
     </Imports>
     <Folders>
-        <Folder>@ThisProject\Source\Scripts</Folder>
+        <Folder>@ThisProject\Data\Source\Scripts</Folder>
     </Folders>
     <ZipFiles Output="@Rel">
         <ZipFile Name="@ModName-@Ver" RootDir="@ThisProject" Compression="deflate">

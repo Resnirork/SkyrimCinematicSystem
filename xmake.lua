@@ -22,5 +22,5 @@ target("SkyrimCinematicSystem")
     set_pcxxheader("src/pch.h")
 
     add_installfiles("Data/Source/Scripts/*.psc", { prefixdir = "Scripts" })
-    add_installfiles("CinematicScripts/*.scs", { prefixdir = "CinematicScripts" })
+    add_installfiles("Data/CinematicScripts/*.scs", { prefixdir = "CinematicScripts" })
     add_installfiles("Data/SKSE/Plugins/SkyrimCinematicSystem.ini", { prefixdir = "SKSE/Plugins" })

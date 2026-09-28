@@ -35,8 +35,10 @@ EndEvent
 Function EnsureKeyArray()
     If (!iKeys)
         iKeys = Utility.CreateIntArray(iKeyIndexMax)
+        Debug.Trace("scsConfigMenu: Created iKeys array with size " + iKeyIndexMax)
     ElseIf (iKeys.Length < iKeyIndexMax)
         iKeys = Utility.ResizeIntArray(iKeys, iKeyIndexMax)
+        Debug.Trace("scsConfigMenu: Resized iKeys array to size " + iKeyIndexMax)
     EndIf
 EndFunction
 
@@ -47,6 +49,7 @@ Function ClearAllKeyBindings()
         index += 1
     EndWhile
     NotifyKeyMapChanged()
+    Debug.Trace("scsConfigMenu: Cleared all key bindings")
 EndFunction
 
 Function RefreshScriptFiles()
@@ -97,7 +100,7 @@ Event OnPageReset(String page)
         RefreshScriptFiles()
     EndIf
 
-    If (page == "$scs_Page_KEYBINDINGS")
+    If (page == "" || Page == Pages[0])
         AddHeaderOption("$scs_Header_KEY_START_STOP")
         AddEmptyOption()
         AddKeyMapOptionST("KEY_START_STOP", "$scs_Short_KEY_START_STOP", iKeys[START_STOP_SCRIPT], OPTION_FLAG_WITH_UNMAP)
@@ -109,7 +112,7 @@ Event OnPageReset(String page)
         AddKeyMapOptionST("KEY_RELATIVE_POINT", "$scs_Short_KEY_RELATIVE_POINT", iKeys[RELATIVE_POINT_RECORDING], OPTION_FLAG_WITH_UNMAP)
         AddKeyMapOptionST("KEY_ABSOLUTE_POINT", "$scs_Short_KEY_ABSOLUTE_POINT", iKeys[ABSOLUTE_POINT_RECORDING], OPTION_FLAG_WITH_UNMAP)
         AddTextOptionST("KEYS_CLEAR_ALL", "$scs_Short_KEYS_CLEAR_ALL", "$scs_Value_KEYS_CLEAR_ALL")
-    Else
+    ElseIf (page == Pages[1])
         Int scriptFlags = OPTION_FLAG_NONE
         AddHeaderOption("$scs_Header_SCRIPT_SELECT")
         If (scriptFiles.Length == 0)
@@ -191,9 +194,7 @@ EndState
 
 State KEY_START_STOP
     Event OnKeyMapChangeST(Int keyCode, String conflictControl, String conflictName)
-        UnregisterForKey(iKeys[START_STOP_SCRIPT])
         iKeys[START_STOP_SCRIPT] = keyCode
-        RegisterForKey(keyCode)
         SetKeyMapOptionValueST(keyCode)
         NotifyKeyMapChanged()
     EndEvent

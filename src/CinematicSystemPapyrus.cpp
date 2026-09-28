@@ -35,8 +35,13 @@ float GetCurrentRotZ(RE::StaticFunctionTag*) { return Runtime::GetSingleton().Ro
 float GetCurrentFOV(RE::StaticFunctionTag*) { return Runtime::GetSingleton().FOV(); }
 float GetCurrentTimeMultiplier(RE::StaticFunctionTag*) { return Runtime::GetSingleton().TimeMultiplier(); }
 
-bool RegisterForCinematicScriptEvents(RE::TESQuest* self) { return Events::Register(self); }
-bool UnregisterForCinematicScriptEvents(RE::TESQuest* self) { return Events::Unregister(self); }
+bool RegisterForCinematicScriptEvents(RE::StaticFunctionTag*, RE::TESForm* form)
+{
+    const bool newlyRegistered = Events::Register(form);
+    logs::info("Papyrus form event registration requested; newly registered: {}.", newlyRegistered);
+    return newlyRegistered;
+}
+bool UnregisterForCinematicScriptEvents(RE::StaticFunctionTag*, RE::TESForm* form) { return Events::Unregister(form); }
 
 bool Register(RE::BSScript::IVirtualMachine* vm)
 {

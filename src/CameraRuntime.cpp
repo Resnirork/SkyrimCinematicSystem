@@ -295,7 +295,8 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
             auto& runtimeData = camera->GetRuntimeData2();
             runtimeData.worldFOV = Lerp(baseline.worldFOV, target, t);
     } else if (a.type == ActionType::Time) {
-        if (auto* cal = RE::Calendar::GetSingleton(); cal && cal->timeScale) {
+        auto* cal = RE::Calendar::GetSingleton();
+        if (cal && cal->timeScale) {
             const float target = a.mode == ValueMode::Absolute ? a.scalar : baseline.timeScale + a.scalar;
             cal->timeScale->value = Lerp(baseline.timeScale, target, t);
         }

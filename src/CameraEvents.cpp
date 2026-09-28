@@ -11,30 +11,31 @@ bool RegisterPapyrusEvents(RE::BSScript::IVirtualMachine*)
     return true;
 }
 
-bool Register(RE::TESQuest* quest)
+bool Register(RE::TESForm* form)
 {
-    if (!quest) {
-        logs::warn("CinematicSystem: cannot register script-finished events for a null quest.");
+    if (!form) {
+        logs::warn("CinematicSystem: cannot register script-finished events for a null form.");
         return false;
     }
-    const bool registered = registrations.Register(quest);
+    const bool registered = registrations.Register(form);
     if (!registered) logs::warn("CinematicSystem: failed to register script-finished events.");
     return registered;
 }
 
-bool Unregister(RE::TESQuest* quest)
+bool Unregister(RE::TESForm* form)
 {
-    if (!quest) {
-        logs::warn("CinematicSystem: cannot unregister script-finished events for a null quest.");
+    if (!form) {
+        logs::warn("CinematicSystem: cannot unregister script-finished events for a null form.");
         return false;
     }
-    const bool unregistered = registrations.Unregister(quest);
+    const bool unregistered = registrations.Unregister(form);
     if (!unregistered) logs::debug("CinematicSystem: script-finished event registration was not found.");
     return unregistered;
 }
 
 void ScriptFinished(std::string_view name, bool cancelled)
 {
+    logs::info("Queueing OnScriptFinishedEvent for '{}' (cancelled: {}).", name, cancelled);
     registrations.QueueEvent(std::string(name), cancelled);
 }
 
