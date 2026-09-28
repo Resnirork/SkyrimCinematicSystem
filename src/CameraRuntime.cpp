@@ -7,6 +7,7 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kRadPerDeg = kPi / 180.0f;
 constexpr float kDegPerRad = 180.0f / kPi;
 const std::filesystem::path kScriptDir = std::filesystem::path("Data") / "CameraScripts";
+
 }
 
 Runtime& Runtime::GetSingleton()
@@ -250,6 +251,7 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
     }
 
     const float t = a.duration <= 0.0f ? 1.0f : std::clamp((elapsed - a.start) / a.duration, 0.0f, 1.0f);
+    const float easedT = t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
     logs::trace("applying action {} (type: {}, mode: {}, t: {})", actionIndex,
                 static_cast<int>(a.type), static_cast<int>(a.mode), t);
 
@@ -285,9 +287,9 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
                                             ? a.vector
                                             : RE::NiPoint3{baseline.position.x + a.vector.x, baseline.position.y + a.vector.y, baseline.position.z + a.vector.z};
             state->translation = {
-                Lerp(baseline.position.x, target.x, t),
-                Lerp(baseline.position.y, target.y, t),
-                Lerp(baseline.position.z, target.z, t)
+                Lerp(baseline.position.x, target.x, easedT),
+                Lerp(baseline.position.y, target.y, easedT),
+                Lerp(baseline.position.z, target.z, easedT)
             };
         }
     } else if (a.type == ActionType::Rotate) {
@@ -299,8 +301,8 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
         const float targetYaw = a.mode == ValueMode::Absolute
                                     ? baseline.yaw + std::remainder(yawDelta - baseline.yaw, 2.0f * kPi)
                                     : baseline.yaw + yawDelta;
-        state->rotation.x = Lerp(baseline.pitch, targetPitch, t);
-        state->rotation.y = Lerp(baseline.yaw, targetYaw, t);
+        state->rotation.x = Lerp(baseline.pitch, targetPitch, easedT);
+        state->rotation.y = Lerp(baseline.yaw, targetYaw, easedT);
     } else if (a.type == ActionType::FOV) {
         const float target = a.mode == ValueMode::Absolute ? a.scalar : baseline.worldFOV + a.scalar;
             auto& runtimeData = camera->GetRuntimeData2();
