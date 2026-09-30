@@ -90,7 +90,7 @@ std::optional<CameraScript> Parser::Parse(const std::filesystem::path& path, std
             }
             float start;
             if (!ParseFloat(fields[1], start) || start < 0.0f) {
-                logs::error("{} line {}: invalid rst start.", path.filename().string(), lineNo);
+                logs::error("{} line {}: invalid rst start '{}'.", path.filename().string(), lineNo, fields[1]);
                 error = "invalid rst start";
                 return std::nullopt;
             }
@@ -107,14 +107,15 @@ std::optional<CameraScript> Parser::Parse(const std::filesystem::path& path, std
         }
 
         if (fields.size() < 4) {
-            logs::error("{} line {}: too few comma-separated fields.", path.filename().string(), lineNo);
+            logs::error("{} line {}: too few comma-separated fields in '{}'.", path.filename().string(), lineNo, line);
             error = "too few comma-separated fields";
             return std::nullopt;
         }
 
         float start, duration;
         if (!ParseFloat(fields[1], start) || !ParseFloat(fields[2], duration) || start < 0.0f || duration < 0.0f) {
-            logs::error("{} line {}: invalid start/duration.", path.filename().string(), lineNo);
+            logs::error("{} line {}: invalid start '{}' or duration '{}' (both must be finite and non-negative).",
+                        path.filename().string(), lineNo, fields[1], fields[2]);
             error = "invalid start/duration";
             return std::nullopt;
         }
@@ -144,7 +145,7 @@ std::optional<CameraScript> Parser::Parse(const std::filesystem::path& path, std
                 RE::NiPoint3 point{};
                 ValueMode pointMode{};
                 if (!ParsePoint(fields[i], pointMode, point)) {
-                    logs::error("{} line {}: invalid spline point {}.", path.filename().string(), lineNo, i - 2);
+                    logs::error("{} line {}: invalid spline point {} '{}'.", path.filename().string(), lineNo, i - 2, fields[i]);
                     error = "invalid spline point";
                     return std::nullopt;
                 }
@@ -152,7 +153,8 @@ std::optional<CameraScript> Parser::Parse(const std::filesystem::path& path, std
                     mode = pointMode;
                     modeSet = true;
                 } else if (pointMode != mode) {
-                    logs::error("{} line {}: all spl points must use the same [] or {{}} mode.", path.filename().string(), lineNo);
+                    logs::error("{} line {}: spline point '{}' mixes [] and {{}} modes; all points must use the same mode.",
+                                path.filename().string(), lineNo, fields[i]);
                     error = "inconsistent spline point mode";
                     return std::nullopt;
                 }
@@ -168,7 +170,7 @@ std::optional<CameraScript> Parser::Parse(const std::filesystem::path& path, std
 
             const auto& value = fields[3];
             if (value.size() < 3) {
-                logs::error("{} line {}: invalid value.", path.filename().string(), lineNo);
+                logs::error("{} line {}: invalid value '{}'.", path.filename().string(), lineNo, value);
                 error = "invalid value";
                 return std::nullopt;
             }
@@ -184,19 +186,19 @@ std::optional<CameraScript> Parser::Parse(const std::filesystem::path& path, std
 
             if (cmd == "mov" || cmd == "rot") {
                 if (nums.size() != 3 && !(cmd == "rot" && nums.size() == 2)) {
-                    logs::error("{} line {}: invalid {} vector.", path.filename().string(), lineNo, cmd);
+                    logs::error("{} line {}: invalid {} vector '{}'.", path.filename().string(), lineNo, cmd, value);
                     error = "invalid vector";
                     return std::nullopt;
                 }
                 float x, y = 0.0f, z;
                 if (!ParseFloat(nums[0], x) || !ParseFloat(nums.back(), z)) {
-                    logs::error("{} line {}: invalid numeric value.", path.filename().string(), lineNo);
+                    logs::error("{} line {}: invalid numeric value in {} vector '{}'.", path.filename().string(), lineNo, cmd, value);
                     error = "invalid numeric value";
                     return std::nullopt;
                 }
                 if (cmd == "mov") {
                     if (!ParseFloat(nums[1], y)) {
-                        logs::error("{} line {}: invalid Y value.", path.filename().string(), lineNo);
+                        logs::error("{} line {}: invalid Y value '{}' in mov vector.", path.filename().string(), lineNo, nums[1]);
                         error = "invalid Y value";
                         return std::nullopt;
                     }
@@ -208,7 +210,7 @@ std::optional<CameraScript> Parser::Parse(const std::filesystem::path& path, std
                 }
             } else if (cmd == "fov" || cmd == "tim") {
                 if (nums.size() != 1 || !ParseFloat(nums[0], a.scalar)) {
-                    logs::error("{} line {}: invalid scalar.", path.filename().string(), lineNo);
+                    logs::error("{} line {}: invalid {} scalar '{}'.", path.filename().string(), lineNo, cmd, value);
                     error = "invalid scalar";
                     return std::nullopt;
                 }

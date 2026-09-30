@@ -1,5 +1,6 @@
 #include "CameraRuntime.h"
 #include "CameraHook.h"
+#include "CameraInterpolation.h"
 
 namespace CinematicSystem {
 namespace {
@@ -76,16 +77,7 @@ void Runtime::SaveState()
                                                               static_cast<RE::PlayerInputHandler*>(state)) != controls->handlers.end();
         }
     }
-    saved_.worldFOV = camera->GetRuntimeData2().worldFOV;
-    saved_.firstPersonFOV = camera->GetRuntimeData2().firstPersonFOV;
-    if (auto* state = GetFreeState()) {
-        saved_.position = state->translation;
-        saved_.pitch = state->rotation.x;
-        saved_.yaw = state->rotation.y;
-    } else {
-        saved_.position = camera->GetRuntimeData2().pos;
-        saved_.yaw = camera->GetRuntimeData2().yaw;
-    }
+    CameraTransform::Capture(camera, GetFreeState(), saved_.cameraPose);
     if (auto* cal = RE::Calendar::GetSingleton()) saved_.timeScale = cal->GetTimescale();
 }
 
@@ -127,6 +119,9 @@ bool Runtime::Start(std::string filename, bool hideInterface)
         logs::error("failed to enter FreeCameraState");
         RestoreState();
         return false;
+    }
+    if (!saved_.wasFreeCamera) {
+        CameraTransform::ApplyToFreeCamera(freeState, saved_.cameraPose);
     }
     if (!Hook::Install(freeState)) {
         RestoreState();
@@ -183,24 +178,6 @@ bool Runtime::IsRunning() const
     return running_;
 }
 
-float Runtime::Lerp(float a, float b, float t)
-{
-    t = std::clamp(t, 0.0f, 1.0f);
-    return a + (b - a) * t;
-}
-
-RE::NiPoint3 Runtime::CatmullRom(const RE::NiPoint3& p0, const RE::NiPoint3& p1,
-                                 const RE::NiPoint3& p2, const RE::NiPoint3& p3, float t)
-{
-    const float t2 = t * t;
-    const float t3 = t2 * t;
-    return {
-        0.5f * (2.0f * p1.x + (-p0.x + p2.x) * t + (2.0f * p0.x - 5.0f * p1.x + 4.0f * p2.x - p3.x) * t2 + (-p0.x + 3.0f * p1.x - 3.0f * p2.x + p3.x) * t3),
-        0.5f * (2.0f * p1.y + (-p0.y + p2.y) * t + (2.0f * p0.y - 5.0f * p1.y + 4.0f * p2.y - p3.y) * t2 + (-p0.y + 3.0f * p1.y - 3.0f * p2.y + p3.y) * t3),
-        0.5f * (2.0f * p1.z + (-p0.z + p2.z) * t + (2.0f * p0.z - 5.0f * p1.z + 4.0f * p2.z - p3.z) * t2 + (-p0.z + 3.0f * p1.z - 3.0f * p2.z + p3.z) * t3)
-    };
-}
-
 void Runtime::CaptureBaseline(std::size_t actionIndex)
 {
     std::scoped_lock lock(mutex_);
@@ -222,12 +199,7 @@ void Runtime::ResetToSaved()
 {
     auto* state = GetFreeState();
     if (!state || !saved_.valid) return;
-    state->translation = saved_.position;
-    state->rotation.x = saved_.pitch;
-    state->rotation.y = saved_.yaw;
-    auto* camera = RE::PlayerCamera::GetSingleton();
-    camera->GetRuntimeData2().worldFOV = saved_.worldFOV;
-    camera->GetRuntimeData2().firstPersonFOV = saved_.firstPersonFOV;
+    CameraTransform::Restore(RE::PlayerCamera::GetSingleton(), state, saved_.cameraPose);
 }
 
 void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float elapsed)
@@ -251,7 +223,7 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
     }
 
     const float t = a.duration <= 0.0f ? 1.0f : std::clamp((elapsed - a.start) / a.duration, 0.0f, 1.0f);
-    const float easedT = t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+    const float easedT = Interpolation::SmootherStep(t);
     logs::trace("applying action {} (type: {}, mode: {}, t: {})", actionIndex,
                 static_cast<int>(a.type), static_cast<int>(a.mode), t);
 
@@ -281,37 +253,39 @@ void Runtime::ApplyAction(std::size_t actionIndex, const CameraAction& a, float 
             const auto& p2 = points[segment + 1];
             const auto& p0 = points[segment == 0 ? 0 : segment - 1];
             const auto& p3 = points[segment + 2 < points.size() ? segment + 2 : points.size() - 1];
-            state->translation = CatmullRom(p0, p1, p2, p3, localT);
+            state->translation = Interpolation::CatmullRom(p0, p1, p2, p3, localT);
         } else {
             const RE::NiPoint3 target = a.mode == ValueMode::Absolute
                                             ? a.vector
                                             : RE::NiPoint3{baseline.position.x + a.vector.x, baseline.position.y + a.vector.y, baseline.position.z + a.vector.z};
             state->translation = {
-                Lerp(baseline.position.x, target.x, easedT),
-                Lerp(baseline.position.y, target.y, easedT),
-                Lerp(baseline.position.z, target.z, easedT)
+                Interpolation::Linear(baseline.position.x, target.x, easedT),
+                Interpolation::Linear(baseline.position.y, target.y, easedT),
+                Interpolation::Linear(baseline.position.z, target.z, easedT)
             };
         }
     } else if (a.type == ActionType::Rotate) {
         const float pitchDelta = -a.vector.x * kRadPerDeg;
         const float targetPitch = a.mode == ValueMode::Absolute
-                                      ? baseline.pitch + std::remainder(pitchDelta - baseline.pitch, 2.0f * kPi)
+                                                                            ? baseline.pitch + Interpolation::ShortestAngleDelta(baseline.pitch, pitchDelta, 2.0f * kPi)
                                       : baseline.pitch + pitchDelta;
         const float yawDelta = a.vector.y * kRadPerDeg;
         const float targetYaw = a.mode == ValueMode::Absolute
-                                    ? baseline.yaw + std::remainder(yawDelta - baseline.yaw, 2.0f * kPi)
+                                                                        ? baseline.yaw + Interpolation::ShortestAngleDelta(baseline.yaw, yawDelta, 2.0f * kPi)
                                     : baseline.yaw + yawDelta;
-        state->rotation.x = Lerp(baseline.pitch, targetPitch, easedT);
-        state->rotation.y = Lerp(baseline.yaw, targetYaw, easedT);
+                state->rotation.x = Interpolation::Linear(baseline.pitch, targetPitch, easedT);
+                state->rotation.y = Interpolation::Linear(baseline.yaw, targetYaw, easedT);
     } else if (a.type == ActionType::FOV) {
-        const float target = a.mode == ValueMode::Absolute ? a.scalar : baseline.worldFOV + a.scalar;
-            auto& runtimeData = camera->GetRuntimeData2();
-            runtimeData.worldFOV = Lerp(baseline.worldFOV, target, t);
+        const float requestedTarget = a.mode == ValueMode::Absolute ? a.scalar : baseline.worldFOV + a.scalar;
+        const float startFOV = std::clamp(baseline.worldFOV, 1.0f, 160.0f);
+        const float target = std::clamp(requestedTarget, 1.0f, 160.0f);
+        auto& runtimeData = camera->GetRuntimeData2();
+        runtimeData.worldFOV = Interpolation::Linear(startFOV, target, t);
     } else if (a.type == ActionType::Time) {
         auto* cal = RE::Calendar::GetSingleton();
         if (cal && cal->timeScale) {
             const float target = a.mode == ValueMode::Absolute ? a.scalar : baseline.timeScale + a.scalar;
-            cal->timeScale->value = Lerp(baseline.timeScale, target, t);
+            cal->timeScale->value = Interpolation::Linear(baseline.timeScale, target, t);
         }
     }
 }
